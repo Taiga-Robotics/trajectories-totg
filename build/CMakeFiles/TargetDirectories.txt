@@ -1,4 +1,0 @@
-/home/iris/devel/trajectories-totg/build/CMakeFiles/rebuild_cache.dir
-/home/iris/devel/trajectories-totg/build/CMakeFiles/edit_cache.dir
-/home/iris/devel/trajectories-totg/build/CMakeFiles/example2.dir
-/home/iris/devel/trajectories-totg/build/CMakeFiles/example.dir

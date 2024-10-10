@@ -36,7 +36,7 @@
  *   POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Trajectory.h"
+#include <trajectories-totg/Trajectory.h>
 #include <limits>
 #include <iostream>
 #include <fstream>

@@ -4,8 +4,8 @@
 #include <sstream>
 #include <cstdio>
 #include <Eigen/Core>
-#include "Trajectory.h"
-#include "Path.h"
+#include <trajectories-totg/Trajectory.h>
+#include <trajectories-totg/Path.h>
 #include <vector>
 
 using namespace std;
@@ -38,14 +38,18 @@ int main() {
     }
     waypointFile.close();
 
+
+    // define limits
 	VectorXd maxAcceleration(6);
 	maxAcceleration << 0.1, 0.1, 0.1, 0.1, 0.1, 0.1;
 	VectorXd maxVelocity(6);
 	maxVelocity << 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
 
-	Trajectory trajectory(Path(waypoints, 0.1), maxVelocity, maxAcceleration);
+	// do the work.
+    Trajectory trajectory(Path(waypoints, 0.1), maxVelocity, maxAcceleration);
 	trajectory.outputPhasePlaneTrajectory();
 
+    // check output
 	if(trajectory.isValid()) {
 		double duration = trajectory.getDuration();
 		cout << "Trajectory duration: " << duration << " s" << endl << endl;

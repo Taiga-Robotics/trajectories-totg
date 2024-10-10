@@ -39,8 +39,8 @@
 #include <iostream>
 #include <cstdio>
 #include <Eigen/Core>
-#include "Trajectory.h"
-#include "Path.h"
+#include <trajectories-totg/Trajectory.h>
+#include <trajectories-totg/Path.h>
 
 using namespace std;
 using namespace Eigen;

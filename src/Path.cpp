@@ -36,7 +36,7 @@
  *   POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Path.h"
+#include <trajectories-totg/Path.h>
 #include <fstream>
 #include <iostream>
 #include <vector>
