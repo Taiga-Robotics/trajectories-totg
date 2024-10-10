@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+import matplotlib.pyplot as plt
+import csv
+
+def read_csv(filename):
+    with open(filename, 'r') as f:
+        reader = csv.reader(f)
+        return list(reader)
+
+# Read waypoints from CSV
+#waypoints = read_csv('waypoints.csv')
+#waypoints = [[float(x) for x in row] for row in waypoints]
+
+# Read trajectory data from CSV
+trajectory_data = read_csv('trajectory_results.csv')
+header = trajectory_data[0]
+trajectory_data = [[float(x) for x in row] for row in trajectory_data[1:]]
+
+# Separate data into columns
+time = [row[header.index('Time')] for row in trajectory_data]
+pos_x = [row[header.index('Position_X')] for row in trajectory_data]
+pos_y = [row[header.index('Position_Y')] for row in trajectory_data]
+pos_z = [row[header.index('Position_Z')] for row in trajectory_data]
+vel_x = [row[header.index('Velocity_X')] for row in trajectory_data]
+vel_y = [row[header.index('Velocity_Y')] for row in trajectory_data]
+vel_z = [row[header.index('Velocity_Z')] for row in trajectory_data]
+
+# Create the plot
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
+
+# Position plot
+ax1.plot(time, pos_x, label='X')
+ax1.plot(time, pos_y, label='Y')
+ax1.plot(time, pos_z, label='Z')
+#ax1.scatter(range(len(waypoints)), [wp[0] for wp in waypoints], c='r', marker='o', label='Waypoints X')
+#ax1.scatter(range(len(waypoints)), [wp[1] for wp in waypoints], c='g', marker='s', label='Waypoints Y')
+#ax1.scatter(range(len(waypoints)), [wp[2] for wp in waypoints], c='b', marker='^', label='Waypoints Z')
+ax1.set_ylabel('Position')
+ax1.legend()
+ax1.grid(True)
+ax1.set_title('Trajectory: Position and Velocity over Time')
+
+# Velocity plot
+ax2.plot(time, vel_x, label='VX')
+ax2.plot(time, vel_y, label='VY')
+ax2.plot(time, vel_z, label='VZ')
+ax2.set_xlabel('Time')
+ax2.set_ylabel('Velocity')
+ax2.legend()
+ax2.grid(True)
+
+plt.tight_layout()
+plt.savefig('trajectory_plot.png')
+plt.show()
+
+print("Plot saved to trajectory_plot.png")
