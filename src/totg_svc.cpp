@@ -11,14 +11,26 @@
 #include <iris_support_msgs/IrisJSONsrv.h>
 
 
+#include <fstream>
+#include <sstream>
+#include <cstdio>
+#include <ros/package.h>
+
+
 using namespace std;
 using namespace Eigen;
 
 
-/*
-    service handler
-*/
 
+vector<string> split(const string &s, char delim) {
+    vector<string> result;
+    stringstream ss(s);
+    string item;
+    while (getline(ss, item, delim)) {
+        result.push_back(item);
+    }
+    return result;
+}
 
 class totg
 {
@@ -51,7 +63,8 @@ public:
     {
         double maxdeviation = 0.1;
         list<VectorXd> waypoints;
-        ROS_INFO("[TOTG] TOTG request received, parsing...");
+
+/*        ROS_INFO("[TOTG] TOTG request received, parsing...");
         nlohmann::json input = nlohmann::json::parse(req.json_str);
         
         int n_points = input["points"].size();
@@ -63,9 +76,40 @@ public:
             waypoints.push_back(point);
 
         }
-        ROS_INFO("[TOTG] TOTG planning...");
-        Trajectory trajectory(Path(waypoints, maxdeviation), maxVelocity_, maxAcceleration_);
-        trajectory.outputPhasePlaneTrajectory();
+        ROS_INFO("wps");
+        for(VectorXd el:waypoints)
+        {
+            std::cout << "\n" << el << std::endl;
+        }
+*/
+
+        // Read waypoints from CSV
+        std::string package_path = ros::package::getPath("trajectories-totg")+"/data/waypoints.csv";
+        ifstream waypointFile(package_path.c_str());
+        string line;
+        while (getline(waypointFile, line)) {
+            vector<string> values = split(line, ',');
+            if (values.size() >= 3) {
+                VectorXd waypoint(6);
+                waypoint << stod(values[0]), stod(values[1]), stod(values[2]), stod(values[3]), stod(values[4]), stod(values[5]);
+                waypoints.push_back(waypoint);
+            }
+        }
+        waypointFile.close();
+
+        ROS_INFO("wps from file %s: ", package_path.c_str());
+        for(VectorXd el:waypoints)
+        {
+            std::cout << "\n" << el << std::endl;
+        }
+
+
+        ROS_INFO("[TOTG] TOTG planning step 1...");
+        auto path = Path(waypoints, maxdeviation);
+        ROS_INFO("[TOTG] TOTG planning step 2...");
+        Trajectory trajectory(path, maxVelocity_, maxAcceleration_);
+        ROS_INFO("[TOTG] TOTG planning step 3...");
+        // trajectory.outputPhasePlaneTrajectory();        // writes to file
         ROS_INFO("[TOTG] TOTG plan completed.");
         nlohmann::json output;
         if(!trajectory.isValid())
@@ -95,10 +139,14 @@ int main(int argc, char** argv) {
 
     totg planner(nh);
 
-    ros::Rate rate(0.05);
+    ros::AsyncSpinner spinner(2);
+    spinner.start();
+
+    ros::Rate rate(20.0);
     ROS_INFO("[TOTG] TOTG Ready!");
     while(ros::ok())
     {
+        // ros::spinOnce();
         rate.sleep();
     }
 

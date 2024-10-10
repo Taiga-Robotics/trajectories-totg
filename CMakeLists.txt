@@ -12,6 +12,7 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  roslib
   rospy
   std_msgs
   std_srvs
@@ -64,6 +65,9 @@ add_executable(totg_svc src/totg_svc.cpp ${SOURCES})
 target_link_libraries(totg_svc Eigen3::Eigen ${catkin_LIBRARIES})
 target_include_directories(totg_svc PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
+add_executable(totg_svc_noclass src/totg_svc_noclass.cpp ${SOURCES})
+target_link_libraries(totg_svc_noclass Eigen3::Eigen ${catkin_LIBRARIES})
+target_include_directories(totg_svc_noclass PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 #############
 ## Install ##
@@ -79,10 +83,10 @@ catkin_install_python(PROGRAMS
 DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-# install(DIRECTORY launch #config urdf worlds trees
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(DIRECTORY data #config urdf worlds trees
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
 
-install(TARGETS example2 totg_svc
+install(TARGETS example2 totg_svc totg_svc_noclass
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
