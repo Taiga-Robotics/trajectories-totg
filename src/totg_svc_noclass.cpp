@@ -1,8 +1,17 @@
+/*
+Time-Optimal Path Following (July 2012)
+We introduce a novel method to generate the time-optimal trajectory that exactly follows a given 
+differentiable joint-space path within given bounds on joint accelerations and velocities. We also
+present a path preprocessing method to make nondifferentiable paths differentiable by adding 
+circular blends. We introduce improvements to existing work that make the algorithm more robust in 
+the presence of numerical inaccuracies. Furthermore we validate our methods on hundreds of
+randomly generated test cases on simulated and real 7-DOF robot arms. Finally, we provide open 
+source software that implements our algorithms.
+
+http://www.golems.org/papers/KunzRSS12-Trajectories.pdf
+*/
 
 #include <iostream>
-#include <fstream>
-#include <sstream>
-#include <cstdio>
 #include <Eigen/Core>
 #include <trajectories-totg/Trajectory.h>
 #include <trajectories-totg/Path.h>
@@ -16,29 +25,26 @@
 using namespace std;
 using namespace Eigen;
 
-
-vector<string> split(const string &s, char delim) {
-    vector<string> result;
-    stringstream ss(s);
-    string item;
-    while (getline(ss, item, delim)) {
-        result.push_back(item);
-    }
-    return result;
-}
-
+// I had to do this because the class based implementation was locking up during the Trajectory trajectory() call
+// I dont like it either but it works.
 volatile bool go=false, done = false;
-iris_support_msgs::IrisJSONsrvRequest svc_req;
+iris_support_msgs::IrisJSONsrvRequest svc_req;  //TODO: volatile
+iris_support_msgs::IrisJSONsrvResponse svc_res; //TODO: volatile
 
 bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::IrisJSONsrvResponse &res)
 {
     svc_req = req;
     go=true;
 
-    // while(!done && ros::ok());
-
+    // wait for main loop to catch the request and create a result.
+    while(!done && ros::ok());  
+    
+    go=false;
+    res = svc_res;
     return(true);
 }
+
+
 
 int main(int argc, char** argv) {
 	list<VectorXd> waypoints;
@@ -47,107 +53,87 @@ int main(int argc, char** argv) {
     ros::NodeHandle nh;
     ros::ServiceServer totg_svc = nh.advertiseService("totg", totg_svc_cb);
 
-	// Read waypoints from CSV
-    // std::string package_path = ros::package::getPath("trajectories-totg")+"/data/waypoints.csv";
-    // ifstream waypointFile(package_path);
-    // string line;
-    // while (getline(waypointFile, line)) {
-    //     vector<string> values = split(line, ',');
-    //     if (values.size() >= 3) {
-    //         VectorXd waypoint(6);
-    //         waypoint << stod(values[0]), stod(values[1]), stod(values[2]), stod(values[3]), stod(values[4]), stod(values[5]);
-    //         waypoints.push_back(waypoint);
-    //     }
-    // }
-    // waypointFile.close();
-
-    // ROS_INFO("wps from file %s: ", package_path.c_str());
-    // for(VectorXd el:waypoints)
-    // {
-    //     std::cout << "\n" << el << std::endl;
-    // }
-
     // define limits
-	VectorXd maxAcceleration(6);
-	maxAcceleration << 0.1, 0.1, 0.1, 0.1, 0.1, 0.1;
-	VectorXd maxVelocity(6);
-	maxVelocity << 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
+	// VectorXd maxAcceleration(6);
+	// maxAcceleration << 10., 10., 10., 10., 10., 10.;
+	// VectorXd maxVelocity(6);
+	// maxVelocity << 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
 
     ros::AsyncSpinner spinner(2);
     spinner.start();
     
-    ROS_INFO("waiting for svc call...");
-    while(!go && ros::ok()) ros::spinOnce();
-    if(!ros::ok()) exit(0);
-
-
-
-
-    ROS_INFO("[TOTG] TOTG request received, parsing...");
-    nlohmann::json input = nlohmann::json::parse(svc_req.json_str);
-    
-    int n_points = input["points"].size();
-    for(int i=0; i<n_points; i++)
+    // main loop
+    while(ros::ok())
     {
-        std::vector<double> inpoint = input["points"][i];
-        Map<VectorXd> point(inpoint.data(), 6);
+        // Idle waiting for service to be called.
+        ROS_INFO("[TOTG] waiting for svc call...");
+        ros::Rate rate(50.0);
+        while(!go && ros::ok()) rate.sleep();
+        if(!ros::ok()) exit(0);
 
-        waypoints.push_back(point);
+        ROS_INFO("[TOTG] Request received, parsing...");
+        //TODO: handle shitty json
+        nlohmann::json input = nlohmann::json::parse(svc_req.json_str);
+        
+        // Load waypoints into eigen type
+        int n_points = input["points"].size();
+        for(int i=0; i<n_points; i++)
+        {
+            std::vector<double> inpoint = input["points"][i];
+            Map<VectorXd> point(inpoint.data(), inpoint.size());
 
+            waypoints.push_back(point);
+
+        }
+        // load constraints into eigen types
+        std::vector<double> qdmax = input["qdmax"];
+        std::vector<double> qddmax = input["qddmax"];
+        Map<VectorXd> maxVelocity(qdmax.data(), qdmax.size());
+        Map<VectorXd> maxAcceleration(qddmax.data(), qddmax.size());
+
+        ROS_INFO("[TOTG] Received %ld wps in request, Planning...", waypoints.size());
+
+        // do the work.
+        auto path = Path(waypoints, 0.1);
+        Trajectory trajectory(path, maxVelocity, maxAcceleration);
+
+        ROS_INFO("[TOTG] Plan complete.");
+        
+        std::vector<std::vector<double>> points, vels;
+
+        // check output, and sample if it's good.
+        nlohmann::json output;
+        if(trajectory.isValid()) {
+            double duration = trajectory.getDuration();
+            double dt = 0.1;
+            ROS_INFO("[TOTG] Valid trajectory calculated, duration: %f, sampling at dt = %f", duration, dt);
+            std::vector<std::vector<double>> points, vels;
+            std::vector<double> times;
+            for(double t = 0.0; t <= duration; t += dt) {
+                VectorXd position = trajectory.getPosition(t);
+                VectorXd velocity = trajectory.getVelocity(t);
+                std::vector<double> point(position.data(), position.data()+position.size());
+                std::vector<double> vel(velocity.data(), velocity.data()+velocity.size());
+                times.push_back(t);
+                points.push_back(point);
+                vels.push_back(vel);
+            }
+            output["times"] = times;
+            output["points"] = points;
+            output["vels"] = vels;
+            output["success"] = true;
+            output["message"] = "Completed.";
+            ROS_INFO("[TOTG] Sampling complete, returning %ld points.", points.size());
+        }
+        else {
+            ROS_ERROR("[TOTG] trajectory generation failed.");
+            output["success"] = false;
+            output["message"] = "failed";
+        }
+        svc_res.json_str = output.dump();
+        done=true;
     }
-    ROS_INFO("wps from svc");
-    for(VectorXd el:waypoints)
-    {
-        std::cout << "\n" << el << std::endl;
-    }
 
-
-
-
-    ROS_INFO("PLANNING.");
-
-	// do the work.
-    Trajectory trajectory(Path(waypoints, 0.1), maxVelocity, maxAcceleration);
-	trajectory.outputPhasePlaneTrajectory();
-
-    ROS_INFO("PLAN COMPLETE.");
-
-
-
-
-
-
-    // check output
-	if(trajectory.isValid()) {
-		double duration = trajectory.getDuration();
-		cout << "Trajectory duration: " << duration << " s" << endl << endl;
-
-
-
-		// Open output CSV file
-        ofstream outputFile("trajectory_results.csv");
-        outputFile << "Time,Position_1,Position_2,Position_3,Position_4,Position_5,Position_6,Velocity_1,Velocity_2,Velocity_3,Velocity_4,Velocity_5,Velocity_6" << endl;
-
-        for(double t = 0.0; t <= duration; t += 0.1) {
-            VectorXd position = trajectory.getPosition(t);
-            VectorXd velocity = trajectory.getVelocity(t);
-
-            // Write to console
-            printf("%6.4f   %7.4f %7.4f %7.4f   %7.4f %7.4f %7.4f\n",
-                   t, position[0], position[1], position[2],
-                   velocity[0], velocity[1], velocity[2]);
-
-            // Write to CSV
-            outputFile << t << ","
-                       << position[0] << "," << position[1] << "," << position[2] << ","
-                       << velocity[0] << "," << velocity[1] << "," << velocity[2] << endl;
-		}
-		outputFile.close();
-        cout << "Results saved to trajectory_results.csv" << endl;
-	}
-	else {
-		cout << "Trajectory generation failed." << endl;
-	}
 	return 0;
 }
 

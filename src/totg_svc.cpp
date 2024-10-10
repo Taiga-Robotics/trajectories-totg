@@ -136,7 +136,9 @@ int main(int argc, char** argv) {
     ros::NodeHandle nh;
 	list<VectorXd> waypoints;
     ROS_INFO("[TOTG] TOTG starting...");
-
+    
+    ROS_FATAL("THIS NODE LOCKS UP WHEN TRYING TO INTERPOLATE.");
+    
     totg planner(nh);
 
     ros::AsyncSpinner spinner(2);
