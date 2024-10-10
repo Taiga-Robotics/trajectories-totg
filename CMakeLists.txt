@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   std_srvs
   trajectory_msgs
+  iris_support_msgs
 )
 
 
@@ -59,6 +60,10 @@ target_link_libraries(example2 Eigen3::Eigen)
 target_include_directories(example2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 
+add_executable(totg_svc src/totg_svc.cpp ${SOURCES})
+target_link_libraries(totg_svc Eigen3::Eigen ${catkin_LIBRARIES})
+target_include_directories(totg_svc PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
 
 #############
 ## Install ##
@@ -78,6 +83,6 @@ DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
 
-install(TARGETS example2
+install(TARGETS example2 totg_svc
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
