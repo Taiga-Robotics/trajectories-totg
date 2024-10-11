@@ -25,19 +25,12 @@ http://www.golems.org/papers/KunzRSS12-Trajectories.pdf
 using namespace std;
 using namespace Eigen;
 
-// I had to do this because the class based implementation was locking up during the Trajectory trajectory() call
-// I dont like it either but it works.
-volatile bool go=false, done = false;
-
-volatile std::string svc_req_str, svc_res_str;
-
 bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::IrisJSONsrvResponse &res)
 {
     list<VectorXd> waypoints;
     
     ROS_INFO("[TOTG] Request received, parsing...");
     //TODO: handle shitty json
-    // nlohmann::json input = nlohmann::json::parse(const_cast<std::string&>(svc_req_str));
     nlohmann::json input = nlohmann::json::parse(req.json_str);
     
     // Load waypoints into eigen type
@@ -97,18 +90,7 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
     }
     // const_cast<std::string&>(svc_res_str) = output.dump();
     res.json_str = output.dump();
-    done=true;
 
-    return(true);
-    
-    const_cast<std::string&>(svc_req_str) = req.json_str;
-    go=true;
-
-    // wait for main loop to catch the request and create a result.
-    while(!done && ros::ok());  
-    
-    go=false;
-    res.json_str = const_cast<std::string&>(svc_res_str);
     return(true);
 }
 
@@ -128,74 +110,6 @@ int main(int argc, char** argv) {
     while(ros::ok())
     {
         rate.sleep();
-        continue;
-        // Idle waiting for service to be called.
-        ROS_INFO("[TOTG] waiting for svc call...");
-        
-        while(!go && ros::ok()) rate.sleep();
-        if(!ros::ok()) exit(0);
-
-        ROS_INFO("[TOTG] Request received, parsing...");
-        //TODO: handle shitty json
-        nlohmann::json input = nlohmann::json::parse(const_cast<std::string&>(svc_req_str));
-        
-        // Load waypoints into eigen type
-        int n_points = input["points"].size();
-        for(int i=0; i<n_points; i++)
-        {
-            std::vector<double> inpoint = input["points"][i];
-            Map<VectorXd> point(inpoint.data(), inpoint.size());
-
-            waypoints.push_back(point);
-
-        }
-        // load constraints into eigen types
-        std::vector<double> qdmax = input["qdmax"];
-        std::vector<double> qddmax = input["qddmax"];
-        Map<VectorXd> maxVelocity(qdmax.data(), qdmax.size());
-        Map<VectorXd> maxAcceleration(qddmax.data(), qddmax.size());
-
-        ROS_INFO("[TOTG] Received %ld wps in request, Planning...", waypoints.size());
-
-        // do the work.
-        auto path = Path(waypoints, 0.1);
-        Trajectory trajectory(path, maxVelocity, maxAcceleration);
-
-        ROS_INFO("[TOTG] Plan complete.");
-        
-        std::vector<std::vector<double>> points, vels;
-
-        // check output, and sample if it's good.
-        nlohmann::json output;
-        if(trajectory.isValid()) {
-            double duration = trajectory.getDuration();
-            double dt = 0.1;
-            ROS_INFO("[TOTG] Valid trajectory calculated, duration: %f, sampling at dt = %f", duration, dt);
-            std::vector<std::vector<double>> points, vels;
-            std::vector<double> times;
-            for(double t = 0.0; t <= duration; t += dt) {
-                VectorXd position = trajectory.getPosition(t);
-                VectorXd velocity = trajectory.getVelocity(t);
-                std::vector<double> point(position.data(), position.data()+position.size());
-                std::vector<double> vel(velocity.data(), velocity.data()+velocity.size());
-                times.push_back(t);
-                points.push_back(point);
-                vels.push_back(vel);
-            }
-            output["times"] = times;
-            output["points"] = points;
-            output["vels"] = vels;
-            output["success"] = true;
-            output["message"] = "Completed.";
-            ROS_INFO("[TOTG] Sampling complete, returning %ld points.", points.size());
-        }
-        else {
-            ROS_ERROR("[TOTG] trajectory generation failed.");
-            output["success"] = false;
-            output["message"] = "failed";
-        }
-        const_cast<std::string&>(svc_res_str) = output.dump();
-        done=true;
     }
 
 	return 0;
