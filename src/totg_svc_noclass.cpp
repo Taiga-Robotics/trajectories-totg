@@ -48,6 +48,7 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
     std::vector<double> qddmax = input["qddmax"];
     Map<VectorXd> maxVelocity(qdmax.data(), qdmax.size());
     Map<VectorXd> maxAcceleration(qddmax.data(), qddmax.size());
+    double dt = input["dt"];
 
     ROS_INFO("[TOTG] Received %ld wps in request, Planning...", waypoints.size());
 
@@ -63,7 +64,6 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
     nlohmann::json output;
     if(trajectory.isValid()) {
         double duration = trajectory.getDuration();
-        double dt = 0.1;
         ROS_INFO("[TOTG] Valid trajectory calculated, duration: %f, sampling at dt = %f", duration, dt);
         std::vector<std::vector<double>> points, vels;
         std::vector<double> times;
@@ -88,7 +88,7 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
         output["success"] = false;
         output["message"] = "failed";
     }
-    // const_cast<std::string&>(svc_res_str) = output.dump();
+
     res.json_str = output.dump();
 
     return(true);
