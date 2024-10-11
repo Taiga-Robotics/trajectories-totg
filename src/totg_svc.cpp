@@ -53,9 +53,10 @@ public:
         maxVelocity_.resize(num_dof);
 
         //populate
+        maxVelocity_ << 0.5, 0.5, 0.5, 0.5, 0.5, 0.5;
         maxAcceleration_ << 0.1, 0.1, 0.1, 0.1, 0.1, 0.1;
 
-        totg_svc = nh_.advertiseService("totg", &totg::totg_svc_cb, this);
+        totg_svc = nh_.advertiseService("/IRIS/backends/trajectory/hardcoded_totg", &totg::totg_svc_cb, this);
     }
 
 
@@ -64,7 +65,7 @@ public:
         double maxdeviation = 0.1;
         list<VectorXd> waypoints;
 
-/*        ROS_INFO("[TOTG] TOTG request received, parsing...");
+        ROS_INFO("[TOTG] TOTG request received, parsing...");
         nlohmann::json input = nlohmann::json::parse(req.json_str);
         
         int n_points = input["points"].size();
@@ -81,28 +82,6 @@ public:
         {
             std::cout << "\n" << el << std::endl;
         }
-*/
-
-        // Read waypoints from CSV
-        std::string package_path = ros::package::getPath("trajectories-totg")+"/data/waypoints.csv";
-        ifstream waypointFile(package_path.c_str());
-        string line;
-        while (getline(waypointFile, line)) {
-            vector<string> values = split(line, ',');
-            if (values.size() >= 3) {
-                VectorXd waypoint(6);
-                waypoint << stod(values[0]), stod(values[1]), stod(values[2]), stod(values[3]), stod(values[4]), stod(values[5]);
-                waypoints.push_back(waypoint);
-            }
-        }
-        waypointFile.close();
-
-        ROS_INFO("wps from file %s: ", package_path.c_str());
-        for(VectorXd el:waypoints)
-        {
-            std::cout << "\n" << el << std::endl;
-        }
-
 
         ROS_INFO("[TOTG] TOTG planning step 1...");
         auto path = Path(waypoints, maxdeviation);
@@ -122,6 +101,26 @@ public:
         }
 
         ROS_INFO("[TOTG] Trajectory was valid.");
+        double duration = trajectory.getDuration();
+        double dt = 0.1;
+        ROS_INFO("[TOTG] Valid trajectory calculated, duration: %f, sampling at dt = %f", duration, dt);
+        std::vector<std::vector<double>> points, vels;
+        std::vector<double> times;
+        for(double t = 0.0; t <= duration; t += dt) {
+            VectorXd position = trajectory.getPosition(t);
+            VectorXd velocity = trajectory.getVelocity(t);
+            std::vector<double> point(position.data(), position.data()+position.size());
+            std::vector<double> vel(velocity.data(), velocity.data()+velocity.size());
+            times.push_back(t);
+            points.push_back(point);
+            vels.push_back(vel);
+        }
+        output["times"] = times;
+        output["points"] = points;
+        output["vels"] = vels;
+        output["success"] = true;
+        output["message"] = "Completed.";
+        res.json_str = output.dump();
 
         return(true);
     }
