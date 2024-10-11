@@ -28,19 +28,19 @@ using namespace Eigen;
 // I had to do this because the class based implementation was locking up during the Trajectory trajectory() call
 // I dont like it either but it works.
 volatile bool go=false, done = false;
-iris_support_msgs::IrisJSONsrvRequest svc_req;  //TODO: volatile
-iris_support_msgs::IrisJSONsrvResponse svc_res; //TODO: volatile
+
+volatile std::string svc_req_str, svc_res_str;
 
 bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::IrisJSONsrvResponse &res)
 {
-    svc_req = req;
+    const_cast<std::string&>(svc_req_str) = req.json_str;
     go=true;
 
     // wait for main loop to catch the request and create a result.
     while(!done && ros::ok());  
     
     go=false;
-    res = svc_res;
+    res.json_str = const_cast<std::string&>(svc_res_str);
     return(true);
 }
 
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 
         ROS_INFO("[TOTG] Request received, parsing...");
         //TODO: handle shitty json
-        nlohmann::json input = nlohmann::json::parse(svc_req.json_str);
+        nlohmann::json input = nlohmann::json::parse(const_cast<std::string&>(svc_req_str));
         
         // Load waypoints into eigen type
         int n_points = input["points"].size();
@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
             output["success"] = false;
             output["message"] = "failed";
         }
-        svc_res.json_str = output.dump();
+        const_cast<std::string&>(svc_res_str) = output.dump();
         done=true;
     }
 
