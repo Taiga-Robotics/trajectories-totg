@@ -51,13 +51,7 @@ int main(int argc, char** argv) {
     
     ros::init(argc, argv, "totg");
     ros::NodeHandle nh;
-    ros::ServiceServer totg_svc = nh.advertiseService("totg", totg_svc_cb);
-
-    // define limits
-	// VectorXd maxAcceleration(6);
-	// maxAcceleration << 10., 10., 10., 10., 10., 10.;
-	// VectorXd maxVelocity(6);
-	// maxVelocity << 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
+    ros::ServiceServer totg_svc = nh.advertiseService("/IRIS/backends/trajectory/hardcoded_totg", totg_svc_cb);
 
     ros::AsyncSpinner spinner(2);
     spinner.start();
