@@ -61,8 +61,13 @@ public:
 	virtual PathSegment* clone() const = 0;
 
 	double position;
+
+	void setindex(unsigned int ind){index = ind;};
+	unsigned int getindex(){return index;};
+
 protected:
 	double length;
+	unsigned int index;
 };
 
 

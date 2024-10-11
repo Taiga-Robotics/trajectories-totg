@@ -54,7 +54,7 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
 
     // do the work.
     auto path = Path(waypoints, 0.1);
-    Trajectory trajectory(path, maxVelocity, maxAcceleration);
+    Trajectory trajectory(path, maxVelocity, maxAcceleration, dt);
 
     ROS_INFO("[TOTG] Plan complete.");
     
@@ -90,6 +90,7 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
     }
 
     res.json_str = output.dump();
+    waypoints.clear();
 
     return(true);
 }

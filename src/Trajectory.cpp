@@ -260,7 +260,7 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 		}
 		else if(pathVel < 0.0) {
 			valid = false;
-			cout << "error" << endl;
+			cout << "Error negative pathvel:" << pathVel << " at pathpos: "<< pathPos << endl;
 			return true;
 		}
 
