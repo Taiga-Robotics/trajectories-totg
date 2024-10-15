@@ -171,6 +171,15 @@ private:
 };
 
 
+//TODO: add a new class BackTrackSegment : public PathSegment 
+//		to handle intermediate waypoints where the angle between 
+//		the approach vector and depart vector is 0 (or zero enough)
+
+
+//TODO: consider class NullMotionSegment : public PathSegment
+//		to handle the case where there's too little or no distance
+//		between two points. null motion criteria could be based on 
+//		dt and accel/vel limits (ie dq <= dt*qdmax && dq <= 1/2 * qddmax*dt^2)
 
 Path::Path(const list<VectorXd> &path, double maxDeviation) :
 	length(0.0)
@@ -185,6 +194,8 @@ Path::Path(const list<VectorXd> &path, double maxDeviation) :
 	while(config2 != path.end()) {
 		config3 = config2;
 		config3++;
+		//TODO: if config1 is close enough to config3 use BackTrackSegment
+		//TODO: if config1 is close enough to config2 use NullMotionSegment
 		if(maxDeviation > 0.0 && config3 != path.end()) {
 			CircularPathSegment* blendSegment = new CircularPathSegment(0.5 * (*config1 + *config2), *config2, 0.5 * (*config2 + *config3), maxDeviation);
 			VectorXd endConfig = blendSegment->getConfig(0.0);

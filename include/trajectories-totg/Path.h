@@ -41,6 +41,15 @@
 #include <list>
 #include <Eigen/Core>
 
+//TODO: a path can track waypoint locations as a map of wp number, segment number, position in segment.
+enum class WaypointLocation
+{
+	start_of_segment,
+	middle_of_segment,
+	end_of_segment
+};
+
+
 class PathSegment
 {
 public:
@@ -62,12 +71,12 @@ public:
 
 	double position;
 
-	void setindex(unsigned int ind){index = ind;};
-	unsigned int getindex(){return index;};
+	// void setindex(unsigned int ind){index = ind;};
+	// unsigned int getindex(){return index;};
 
 protected:
 	double length;
-	unsigned int index;
+	// unsigned int index;
 };
 
 
