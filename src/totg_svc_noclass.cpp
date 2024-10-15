@@ -58,7 +58,7 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
     ROS_INFO("[TOTG] Received %ld wps in request, Planning...", waypoints.size());
 
     // do the work.
-    auto path = Path(waypoints, 0.1);
+    auto path = Path(waypoints, max_deviation);
     Trajectory trajectory(path, maxVelocity, maxAcceleration, dt);
 
     ROS_INFO("[TOTG] Plan complete.");
