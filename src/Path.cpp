@@ -197,11 +197,13 @@ Path::Path(const list<VectorXd> &path, double maxDeviation) :
 		//TODO: if config1 is close enough to config3 use BackTrackSegment
 		//TODO: if config1 is close enough to config2 use NullMotionSegment
 		if(maxDeviation > 0.0 && config3 != path.end()) {
+			// memory leak, if the linearpath is used instead
 			CircularPathSegment* blendSegment = new CircularPathSegment(0.5 * (*config1 + *config2), *config2, 0.5 * (*config2 + *config3), maxDeviation);
 			VectorXd endConfig = blendSegment->getConfig(0.0);
 			if((endConfig - startConfig).norm() > 0.000001) {
 				pathSegments.push_back(new LinearPathSegment(startConfig, endConfig));
 			}
+			// if we always do this then what does the above conditional accomplish?
 			pathSegments.push_back(blendSegment);
 			
 			startConfig = blendSegment->getConfig(blendSegment->getLength());
