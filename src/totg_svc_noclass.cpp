@@ -82,6 +82,18 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
             vels.push_back(vel);
         }
 
+        // get final sample
+        if(times.back() < duration)
+        {
+            VectorXd position = trajectory.getPosition(duration);
+            VectorXd velocity = trajectory.getVelocity(duration);
+            std::vector<double> point(position.data(), position.data()+position.size());
+            std::vector<double> vel(velocity.data(), velocity.data()+velocity.size());
+            times.push_back(duration);
+            points.push_back(point);
+            vels.push_back(vel);
+        }
+
         std::vector<double> arrival_times = trajectory.getArrivalTimes();
         output["times"] = times;
         output["points"] = points;
