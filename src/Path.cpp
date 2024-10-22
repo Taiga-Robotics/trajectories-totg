@@ -54,7 +54,7 @@ public:
 	LinearPathSegment(const Eigen::VectorXd &start, const Eigen::VectorXd &end) :
 		start(start),
 		end(end),
-		PathSegment((end-start).norm())
+		PathSegment((end-start).norm())	//length is always 1.0 for linear segments.
 	{
 	}
 
@@ -92,6 +92,7 @@ public:
 	CircularPathSegment(const Eigen::VectorXd &start, const Eigen::VectorXd &intersection, const Eigen::VectorXd &end, double maxDeviation) {
 
 		// handle waypoints being too close together (null motion)
+		// 0 length is correct as there is no motion.
 		if((intersection - start).norm() < 0.000001 || (end - intersection).norm() < 0.000001) {
 			length = 0.0;
 			radius = 1.0;
@@ -105,6 +106,7 @@ public:
 		const Eigen::VectorXd endDirection = (end - intersection).normalized();
 
 		// handle waypoints being too colinear for circularization
+		// this evaluates to a null motion segment and forces the pathing loop to create linears to get here.
 		if((startDirection - endDirection).norm() < 0.000001) {
 			length = 0.0;
 			radius = 1.0;
@@ -113,9 +115,6 @@ public:
 			y = Eigen::VectorXd::Zero(start.size());
 			return;
 		}
-
-		const double startDistance = (start - intersection).norm();
-		const double endDistance = (end - intersection).norm();
 
 		double distance = std::min((start - intersection).norm(), (end - intersection).norm());
 		const double angle = acos(startDirection.dot(endDirection));
@@ -169,8 +168,8 @@ public:
 private:
 	double radius;
 	Eigen::VectorXd center;
-	Eigen::VectorXd x;
-	Eigen::VectorXd y;
+	Eigen::VectorXd x;	// unit vector from centre to start of circlepathsegment. Orthogonal to y
+	Eigen::VectorXd y;	// unit vector in direction of start of circlepathsegment. Orthogonal to x
 };
 
 
@@ -205,11 +204,11 @@ Path::Path(const list<VectorXd> &path, double maxDeviation) :
 		//TODO: if q_startpoint is close enough to q_endpoint use BackTrackSegment
 		//TODO: if q_startpoint is close enough to q_midpoint use NullMotionSegment
 		if(maxDeviation > 0.0 && q_endpoint != path.end()) {
-			//TODO: memory leaks everywhere, make all this used shared pointers.
+			//TODO: make all this used shared pointers.
 			CircularPathSegment* CircleBlendSegment = new CircularPathSegment(0.5 * (*q_startpoint + *q_midpoint), *q_midpoint, 0.5 * (*q_midpoint + *q_endpoint), maxDeviation);
 			VectorXd q_blendstart = CircleBlendSegment->getConfig(0.0);
 
-			// connect the end of the last blend (or initial point) to the start of this blend, unless theyre REALLY close.
+			// connect (stitch) the end of the last blend (or initial point) to the start of this blend, unless theyre REALLY close.
 			if((q_blendstart - q_lastsegmentfinal).norm() > 0.000001) {
 				pathSegments.push_back(new LinearPathSegment(q_lastsegmentfinal, q_blendstart));
 			}
