@@ -113,6 +113,71 @@ void Trajectory::outputPhasePlaneTrajectory() const {
 	file2.close();
 }
 
+void Trajectory::printPhasePlaneTrajectory() const {
+
+	for(list<TrajectoryStep>::const_iterator it = trajectory.begin(); it != trajectory.end(); it++) {
+		std::cout 	<< " pos: " << it->pathPos 
+					<< ",vel: " << it->pathVel 
+					<< ",tme: " << it->time << std::endl;
+	}
+}
+
+
+std::vector<double> Trajectory::getArrivalTimes()
+{
+    std::vector<double> arrival_times;
+	list<TrajectoryStep>::const_iterator traj_seg = trajectory.begin();
+	auto last_traj_seg = traj_seg;
+	traj_seg++;
+	int count = 0;
+	for(auto wp: path.wp_segment_locations)
+    {
+		//determine position to find in trajectorysegments list
+		double x = wp.first->position;	//start of segment case
+		if (wp.second==WaypointLocation::middle_of_segment)
+		{
+			x = wp.first->position + wp.first->getLength()/2;
+		}
+		else if (wp.second==WaypointLocation::end_of_segment)
+		{
+			x = wp.first->position + wp.first->getLength();
+		}
+
+		//search for the trajectorysegments who bound our path position
+		while((x >= traj_seg->pathPos) && (traj_seg!=trajectory.end()))
+		{
+			last_traj_seg = traj_seg;
+			traj_seg++;
+		}
+
+		// check possible failure condition.
+		if(traj_seg==trajectory.end())
+		{
+			if(arrival_times.size() == (path.wp_segment_locations.size()-1))
+			{
+				arrival_times.push_back(getDuration());
+			}
+			else
+			{
+				std::cout << "Error, hit end of of trajectorysegments looking for wp" << std::endl;
+			}
+			break;
+		}
+
+		// linterp pathpos into time.
+		double y0 = last_traj_seg->time;
+		double y1 = traj_seg->time;
+		double x0 = last_traj_seg->pathPos;
+		double x1 = traj_seg->pathPos;
+		
+		double arrival_time = ( y0*(x1-x) + y1*(x-x0) ) / (x1 - x0);
+
+		arrival_times.push_back(arrival_time);
+    }   
+
+	return(arrival_times);
+}
+
 // returns true if end of path is reached.
 bool Trajectory::getNextSwitchingPoint(double pathPos, TrajectoryStep &nextSwitchingPoint, double &beforeAcceleration, double &afterAcceleration) {
 	TrajectoryStep accelerationSwitchingPoint(pathPos, 0.0);
@@ -260,7 +325,8 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 		}
 		else if(pathVel < 0.0) {
 			valid = false;
-			cout << "Error negative pathvel:" << pathVel << " at pathpos: "<< pathPos << endl;
+			cout << "Error while integrating forward, negative path velocity of : " << pathVel <<
+				 ", pathpos: " << pathPos << ", acceleration: " << acceleration << ", timestep: " << timeStep << endl;
 			return true;
 		}
 
@@ -339,7 +405,8 @@ void Trajectory::integrateBackward(list<TrajectoryStep> &startTrajectory, double
 			
 			if(pathVel < 0.0) {
 				valid = false;
-				cout << "Error while integrating backward: Negative path velocity" << endl;
+				cout << "Error while integrating backward: Negative path velocity of " << pathVel <<
+				 ", pathpos: " << pathPos << ", acceleration: " << acceleration << ", timestep: " << timeStep << endl;
 				endTrajectory = trajectory;
 				return;
 			}

@@ -40,6 +40,8 @@
 
 #include <list>
 #include <Eigen/Core>
+#include <vector>
+
 
 //TODO: a path can track waypoint locations as a map of wp number, segment number, position in segment.
 enum class WaypointLocation
@@ -93,9 +95,11 @@ public:
 	Eigen::VectorXd getCurvature(double s) const;
 	double getNextSwitchingPoint(double s, bool &discontinuity) const;
 	std::list<std::pair<double, bool> > getSwitchingPoints() const;
+	std::vector<std::pair<PathSegment*, WaypointLocation>> wp_segment_locations;	// a vector of len(waypoints) that holds a pair indicating which segment and which part of said segment the waypoint will be arrived at.
 private:
 	PathSegment* getPathSegment(double &s) const;
 	double length;
 	std::list<std::pair<double, bool> > switchingPoints;
 	std::list<PathSegment*> pathSegments;
+	
 };

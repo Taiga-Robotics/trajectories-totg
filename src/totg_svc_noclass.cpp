@@ -39,10 +39,10 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
     {
         std::vector<double> inpoint = input["points"][i];
         Map<VectorXd> point(inpoint.data(), inpoint.size());
-
         waypoints.push_back(point);
 
     }
+
     // load constraints into eigen types
     std::vector<double> qdmax = input["qdmax"];
     std::vector<double> qddmax = input["qddmax"];
@@ -58,7 +58,7 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
     ROS_INFO("[TOTG] Received %ld wps in request, Planning...", waypoints.size());
 
     // do the work.
-    auto path = Path(waypoints, max_deviation);
+    Path path = Path(waypoints, max_deviation);
     Trajectory trajectory(path, maxVelocity, maxAcceleration, dt);
 
     ROS_INFO("[TOTG] Plan complete.");
@@ -81,9 +81,12 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
             points.push_back(point);
             vels.push_back(vel);
         }
+
+        std::vector<double> arrival_times = trajectory.getArrivalTimes();
         output["times"] = times;
         output["points"] = points;
         output["vels"] = vels;
+        output["arrival_times"] = arrival_times;
         output["success"] = true;
         output["message"] = "Completed.";
         ROS_INFO("[TOTG] Sampling complete, returning %ld points.", points.size());
@@ -109,6 +112,7 @@ int main(int argc, char** argv) {
     ros::NodeHandle nh;
     ros::ServiceServer totg_svc = nh.advertiseService("/IRIS/backends/trajectory/hardcoded_totg", totg_svc_cb);
 
+    ROS_INFO("[TOTG] Time optimal trajectory generation CPP node running.");
     ros::AsyncSpinner spinner(2);
     spinner.start();
     ros::Rate rate(50.0);

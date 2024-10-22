@@ -90,6 +90,8 @@ class CircularPathSegment : public PathSegment
 {
 public:
 	CircularPathSegment(const Eigen::VectorXd &start, const Eigen::VectorXd &intersection, const Eigen::VectorXd &end, double maxDeviation) {
+
+		// handle waypoints being too close together (null motion)
 		if((intersection - start).norm() < 0.000001 || (end - intersection).norm() < 0.000001) {
 			length = 0.0;
 			radius = 1.0;
@@ -102,6 +104,7 @@ public:
 		const Eigen::VectorXd startDirection = (intersection - start).normalized();
 		const Eigen::VectorXd endDirection = (end - intersection).normalized();
 
+		// handle waypoints being too colinear for circularization
 		if((startDirection - endDirection).norm() < 0.000001) {
 			length = 0.0;
 			radius = 1.0;
@@ -185,36 +188,48 @@ Path::Path(const list<VectorXd> &path, double maxDeviation) :
 	length(0.0)
 {
 	if(path.size() < 2)
+	{
+		std::cout << "Error: path length too short at start of path construction. Required length is 2 or more, actual length: " << path.size() << std::endl;
 		return;
-	list<VectorXd>::const_iterator config1 = path.begin();
-	list<VectorXd>::const_iterator config2 = config1;
-	config2++;
-	list<VectorXd>::const_iterator config3;
-	VectorXd startConfig = *config1;
-	while(config2 != path.end()) {
-		config3 = config2;
-		config3++;
-		//TODO: if config1 is close enough to config3 use BackTrackSegment
-		//TODO: if config1 is close enough to config2 use NullMotionSegment
-		if(maxDeviation > 0.0 && config3 != path.end()) {
-			// memory leak, if the linearpath is used instead
-			CircularPathSegment* blendSegment = new CircularPathSegment(0.5 * (*config1 + *config2), *config2, 0.5 * (*config2 + *config3), maxDeviation);
-			VectorXd endConfig = blendSegment->getConfig(0.0);
-			if((endConfig - startConfig).norm() > 0.000001) {
-				pathSegments.push_back(new LinearPathSegment(startConfig, endConfig));
-			}
-			// if we always do this then what does the above conditional accomplish?
-			pathSegments.push_back(blendSegment);
-			
-			startConfig = blendSegment->getConfig(blendSegment->getLength());
-		}
-		else {
-			pathSegments.push_back(new LinearPathSegment(startConfig, *config2));
-			startConfig = *config2;
-		}
-		config1 = config2;
-		config2++;
 	}
+	list<VectorXd>::const_iterator q_startpoint = path.begin();
+	list<VectorXd>::const_iterator q_midpoint = q_startpoint;
+	q_midpoint++;
+	list<VectorXd>::const_iterator q_endpoint;
+	VectorXd q_lastsegmentfinal = *q_startpoint;
+
+	while(q_midpoint != path.end()) {
+		q_endpoint = q_midpoint;
+		q_endpoint++;
+		//TODO: implement separate classifier function to identify ideal segment fit?
+		//TODO: if q_startpoint is close enough to q_endpoint use BackTrackSegment
+		//TODO: if q_startpoint is close enough to q_midpoint use NullMotionSegment
+		if(maxDeviation > 0.0 && q_endpoint != path.end()) {
+			//TODO: memory leaks everywhere, make all this used shared pointers.
+			CircularPathSegment* CircleBlendSegment = new CircularPathSegment(0.5 * (*q_startpoint + *q_midpoint), *q_midpoint, 0.5 * (*q_midpoint + *q_endpoint), maxDeviation);
+			VectorXd q_blendstart = CircleBlendSegment->getConfig(0.0);
+
+			// connect the end of the last blend (or initial point) to the start of this blend, unless theyre REALLY close.
+			if((q_blendstart - q_lastsegmentfinal).norm() > 0.000001) {
+				pathSegments.push_back(new LinearPathSegment(q_lastsegmentfinal, q_blendstart));
+			}
+			pathSegments.push_back(CircleBlendSegment);
+			wp_segment_locations.push_back({pathSegments.back(), WaypointLocation::middle_of_segment});
+			
+			q_lastsegmentfinal = CircleBlendSegment->getConfig(CircleBlendSegment->getLength());
+		}
+		// end segment always gets a linear
+		else {
+			pathSegments.push_back(new LinearPathSegment(q_lastsegmentfinal, *q_midpoint));
+			wp_segment_locations.push_back({pathSegments.back(), WaypointLocation::end_of_segment});
+			q_lastsegmentfinal = *q_midpoint;
+		}
+		q_startpoint = q_midpoint;
+		q_midpoint++;
+	}
+
+	//set first point arrival segment because we ignored it in the loop
+	wp_segment_locations.insert(wp_segment_locations.begin(), {pathSegments.front(), WaypointLocation::start_of_segment});	
 
 	// create list of switching point candidates, calculate total path length and absolute positions of path segments
 	for(list<PathSegment*>::iterator segment = pathSegments.begin(); segment != pathSegments.end(); segment++) {
@@ -233,7 +248,8 @@ Path::Path(const list<VectorXd> &path, double maxDeviation) :
 
 Path::Path(const Path &path) :
 	length(path.length),
-	switchingPoints(path.switchingPoints)
+	switchingPoints(path.switchingPoints),
+	wp_segment_locations(path.wp_segment_locations)
 {
 	for(list<PathSegment*>::const_iterator it = path.pathSegments.begin(); it != path.pathSegments.end(); it++) {
 		pathSegments.push_back((*it)->clone());
