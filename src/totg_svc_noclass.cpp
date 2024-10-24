@@ -85,13 +85,26 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
         // get final sample
         if(times.back() < duration)
         {
+            //create final point data
             VectorXd position = trajectory.getPosition(duration);
             VectorXd velocity = trajectory.getVelocity(duration);
             std::vector<double> point(position.data(), position.data()+position.size());
             std::vector<double> vel(velocity.data(), velocity.data()+velocity.size());
-            times.push_back(duration);
-            points.push_back(point);
-            vels.push_back(vel);
+
+            if(times.back() < (duration-(dt/2.0)))
+            {
+                // append final sample
+                times.push_back(duration);
+                points.push_back(point);
+                vels.push_back(vel);
+
+            }else
+            {
+                //adjust final sample
+                times.back() = duration;
+                points.back() = point;
+                vels.back() = vel;
+            }
         }
 
         std::vector<double> arrival_times = trajectory.getArrivalTimes();
