@@ -55,6 +55,19 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
         max_deviation = input["max_deviation"];
     }
 
+    //TOTG will segfault with 1 waypoint... also what are you doing?
+    if(waypoints.size() < 2)
+    {
+        nlohmann::json output;
+        output["success"] = false;
+        output["message"] = "Too few waypoints were supplied. TOTG requires at least 2 points, " + std::to_string(waypoints.size()) + " were provided.";
+        ROS_ERROR("[TOTG] Too few waypoints were supplied. TOTG requires at least 2 points, %d were provided.", waypoints.size());
+        res.json_str = output.dump();
+        waypoints.clear();
+        return(true);
+
+    }
+
     ROS_INFO("[TOTG] Received %ld wps in request, Planning...", waypoints.size());
 
     // do the work.
