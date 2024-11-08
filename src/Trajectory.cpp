@@ -327,7 +327,7 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 			valid = false;
 			cout << "Error while integrating forward, negative path velocity of : " << pathVel <<
 				 ", pathpos: " << pathPos << ", acceleration: " << acceleration << ", timestep: " << timeStep << endl;
-			return true;
+			return true;	//TODO: false? end of path was not reached.
 		}
 
 		if(pathVel > getVelocityMaxPathVelocity(pathPos)
