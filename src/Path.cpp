@@ -120,7 +120,7 @@ public:
 		// this evaluates to a null motion segment and forces the pathing loop to create linears to get here.
 		auto v1 = startDirection/startDirection.norm();
 		auto v2 = endDirection/endDirection.norm();
-		if(v1.dot(-v2) > (1.0 - 0.00001) ) {
+		if(v1.dot(-v2) > (1.0 - 0.01) ) {
 			length = 0.0;
 			radius = 1.0;
 			center = intersection;

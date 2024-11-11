@@ -130,9 +130,9 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
         ROS_INFO("[TOTG] Sampling complete, returning %ld points.", points.size());
     }
     else {
-        ROS_ERROR("[TOTG] trajectory generation failed.");
+        ROS_ERROR("[TOTG] trajectory generation failed with message(s): %s", trajectory.getMessage().c_str());
         output["success"] = false;
-        output["message"] = "failed";
+        output["message"] = "Generation failed with message: " + trajectory.getMessage();
     }
 
     res.json_str = output.dump();

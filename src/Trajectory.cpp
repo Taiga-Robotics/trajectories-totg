@@ -159,7 +159,9 @@ std::vector<double> Trajectory::getArrivalTimes()
 			}
 			else
 			{
-				std::cout << "Error, hit end of of trajectorysegments looking for wp" << std::endl;
+				std::string msg = "Error, hit end of of trajectorysegments looking for wp";
+				appendMessage(msg);
+				std::cout << msg << std::endl;
 			}
 			break;
 		}
@@ -325,8 +327,11 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 		}
 		else if(pathVel < 0.0) {
 			valid = false;
-			cout << "Error while integrating forward, negative path velocity of : " << pathVel <<
-				 ", pathpos: " << pathPos << ", acceleration: " << acceleration << ", timestep: " << timeStep << endl;
+			std::string msg = "Error while integrating forward, negative path velocity of : " + std::to_string(pathVel) +
+				", pathpos: " + std::to_string( pathPos) + ", acceleration: " + std::to_string(acceleration) + ", timestep: " + std::to_string(timeStep);
+			appendMessage(msg);
+			std::cout << msg << std::endl;
+
 			return true;	//TODO: false? end of path was not reached.
 		}
 
@@ -397,8 +402,10 @@ void Trajectory::integrateBackward(list<TrajectoryStep> &startTrajectory, double
 	if(start1->pathPos > pathPos)
 	{
 		valid=false;
-		cout << "Error just before integrating backward: Requested pathPos " << pathPos <<
-			" is less than trajectorystep starting pathpos " << start1->pathPos << endl;
+		std::string msg = "Error just before integrating backward: Requested pathPos " + std::to_string(pathPos) +
+							" is less than trajectorystep starting pathpos " + std::to_string(start1->pathPos);
+		appendMessage(msg);
+		std::cout << msg << std::endl;
 		return;
 	}
 
@@ -413,8 +420,12 @@ void Trajectory::integrateBackward(list<TrajectoryStep> &startTrajectory, double
 			
 			if(pathVel < 0.0) {
 				valid = false;
-				cout << "Error while integrating backward: Negative path velocity of " << pathVel <<
-				 ", pathpos: " << pathPos << ", acceleration: " << acceleration << ", timestep: " << timeStep << endl;
+				std::string msg = "Error while integrating backward: Negative path velocity of " + std::to_string(pathVel) +
+				 					", pathpos: " + std::to_string(pathPos) + ", acceleration: " + std::to_string(acceleration) + ", timestep: " + 
+				 					std::to_string(timeStep);
+				appendMessage(msg);
+				std::cout << msg << std::endl;
+
 				endTrajectory = trajectory;
 				return;
 			}
@@ -437,7 +448,10 @@ void Trajectory::integrateBackward(list<TrajectoryStep> &startTrajectory, double
 	}
 
 	valid = false;
-	cout << "Error while integrating backward: Did not hit start trajectory" << endl;
+	std::string msg = "Error while integrating backward: Did not hit start trajectory";
+	appendMessage(msg);
+	std::cout << msg << std::endl;
+
 	endTrajectory = trajectory;
 }
 

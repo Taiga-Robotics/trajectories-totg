@@ -53,6 +53,9 @@ public:
 	// If this method returns false, all other methods have undefined behavior.
 	bool isValid() const;
 
+	// returns aggregated error messages from trajectory class.
+	std::string getMessage(){ return(message); }
+	void appendMessage(std::string newmsg){ message += newmsg+"\n"; }
 	// Returns the optimal duration of the trajectory
 	double getDuration() const;
 
@@ -104,4 +107,5 @@ private:
 
 	mutable double cachedTime;
 	mutable std::list<TrajectoryStep>::const_iterator cachedTrajectorySegment;
+	std::string message="";
 };
