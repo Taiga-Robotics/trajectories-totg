@@ -392,7 +392,15 @@ void Trajectory::integrateBackward(list<TrajectoryStep> &startTrajectory, double
 	start1--;
 	list<TrajectoryStep> trajectory;
 	double slope;
-	assert(start1->pathPos <= pathPos);
+	
+	// assert(start1->pathPos <= pathPos);
+	if(start1->pathPos > pathPos)
+	{
+		valid=false;
+		cout << "Error just before integrating backward: Requested pathPos " << pathPos <<
+			" is less than trajectorystep starting pathpos " << start1->pathPos << endl;
+		return;
+	}
 
 	while(start1 != startTrajectory.begin() || pathPos >= 0.0)
 	{
