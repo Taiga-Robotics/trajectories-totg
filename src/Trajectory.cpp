@@ -312,13 +312,21 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 
 		double oldPathPos = pathPos;
 		double oldPathVel = pathVel;
+		double localTimeStep=timeStep;
 		
-		pathVel += timeStep * acceleration;
-		pathPos += timeStep * 0.5 * (oldPathVel + pathVel);
+		if ((pathVel + localTimeStep*acceleration) < 0.0)
+		{
+			localTimeStep = abs(pathVel/(2.0 * acceleration));
+			// cout<<"Tweaking timestep from " << timeStep << " to " << localTimeStep << endl;
+		}
 
+		pathVel += localTimeStep * acceleration;
+		pathPos += localTimeStep * 0.5 * (oldPathVel + pathVel);
+		// cout<< "         PP: " << pathPos << ", PV: " << pathVel << endl;
 		if(nextDiscontinuity != switchingPoints.end() && pathPos > nextDiscontinuity->first) {
 			pathVel = oldPathVel + (nextDiscontinuity->first - oldPathPos) * (pathVel - oldPathVel) / (pathPos - oldPathPos);
 			pathPos = nextDiscontinuity->first;
+			// cout<< "modified PP: " << pathPos << ", PV: " << pathVel << endl;
 		}
 
 		if(pathPos > path.getLength()) {
@@ -328,7 +336,8 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 		else if(pathVel < 0.0) {
 			valid = false;
 			std::string msg = "Error while integrating forward, negative path velocity of : " + std::to_string(pathVel) +
-				", pathpos: " + std::to_string( pathPos) + ", acceleration: " + std::to_string(acceleration) + ", timestep: " + std::to_string(timeStep);
+				", pathpos: " + std::to_string( pathPos) + ", acceleration: " + std::to_string(acceleration) + ", local timestep: " + std::to_string(localTimeStep) + 
+				", old pathpos: " + std::to_string(oldPathPos) +", old path vel: " + std::to_string(oldPathVel);
 			appendMessage(msg);
 			std::cout << msg << std::endl;
 
@@ -413,16 +422,23 @@ void Trajectory::integrateBackward(list<TrajectoryStep> &startTrajectory, double
 	{
 		if(start1->pathPos <= pathPos) {
 			trajectory.push_front(TrajectoryStep(pathPos, pathVel));
-			pathVel -= timeStep * acceleration;
-			pathPos -= timeStep * 0.5 * (pathVel + trajectory.front().pathVel);
+			double localTimeStep = timeStep;
+			if ((pathVel - localTimeStep*acceleration) < 0.0)
+			{
+				localTimeStep = abs(pathVel/(2.0 * acceleration));
+				// cout<<"Tweaking timestep from " << timeStep << " to " << localTimeStep << endl;
+			}
+
+			pathVel -= localTimeStep * acceleration;
+			pathPos -= localTimeStep * 0.5 * (pathVel + trajectory.front().pathVel);
 			acceleration = getMinMaxPathAcceleration(pathPos, pathVel, false);
 			slope = (trajectory.front().pathVel - pathVel) / (trajectory.front().pathPos - pathPos);
 			
 			if(pathVel < 0.0) {
 				valid = false;
 				std::string msg = "Error while integrating backward: Negative path velocity of " + std::to_string(pathVel) +
-				 					", pathpos: " + std::to_string(pathPos) + ", acceleration: " + std::to_string(acceleration) + ", timestep: " + 
-				 					std::to_string(timeStep);
+				 					", pathpos: " + std::to_string(pathPos) + ", acceleration: " + std::to_string(acceleration) + ", local timestep: " + 
+				 					std::to_string(localTimeStep);
 				appendMessage(msg);
 				std::cout << msg << std::endl;
 
@@ -448,7 +464,7 @@ void Trajectory::integrateBackward(list<TrajectoryStep> &startTrajectory, double
 	}
 
 	valid = false;
-	std::string msg = "Error while integrating backward: Did not hit start trajectory";
+	std::string msg = "Error after integrating backward a step: Did not hit start trajectory";
 	appendMessage(msg);
 	std::cout << msg << std::endl;
 
