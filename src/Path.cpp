@@ -54,7 +54,7 @@ public:
 	LinearPathSegment(const Eigen::VectorXd &start, const Eigen::VectorXd &end) :
 		start(start),
 		end(end),
-		PathSegment((end-start).norm())	//length is always 1.0 for linear segments.
+		PathSegment((end-start).norm())	//this norm is the length of this segment.
 	{
 	}
 
