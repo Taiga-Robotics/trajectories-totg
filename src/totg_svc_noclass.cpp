@@ -83,6 +83,17 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
     nlohmann::json output;
     if(trajectory.isValid()) {
         double duration = trajectory.getDuration();
+        if(isnan(duration))
+        {
+            //this is bad
+            ROS_ERROR("[TOTG] Duration is NaN, failing.");
+            output["success"] = false;
+            output["message"] = "TOTG Fault: duration was NaN.";
+            res.json_str = output.dump();
+            waypoints.clear();
+            return(true);
+        }
+
         ROS_INFO("[TOTG] Valid trajectory calculated, duration: %f, sampling at dt = %f", duration, dt);
         std::vector<std::vector<double>> points, vels;
         std::vector<double> times;

@@ -65,15 +65,15 @@ public:
 	}
 
 	Eigen::VectorXd getTangent(double /* s */) const {
-		return (end - start) / length;
+		return (end - start) / length;					// line segment tangent is the line.
 	}
 
 	Eigen::VectorXd getCurvature(double /* s */) const {
-		return Eigen::VectorXd::Zero(start.size());
+		return Eigen::VectorXd::Zero(start.size());		// line segment has no curvature
 	}
 
 	list<double> getSwitchingPoints() const {
-		return list<double>();
+		return list<double>();							// line segment has no switching points
 	}
 
 	LinearPathSegment* clone() const {
@@ -157,6 +157,7 @@ public:
 		return - 1.0 / radius * (x * cos(angle) + y * sin(angle));
 	}
 
+	/* each axis has at most one switching point, so there will be up to dim returned */
 	list<double> getSwitchingPoints() const {
 		list<double> switchingPoints;
 		const double dim = x.size();
