@@ -49,11 +49,7 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
     Map<VectorXd> maxVelocity(qdmax.data(), qdmax.size());
     Map<VectorXd> maxAcceleration(qddmax.data(), qddmax.size());
     double dt = input["dt"];
-    double max_deviation = 0.1;
-    if(input.count("max_deviation"))
-    {
-        max_deviation = input["max_deviation"];
-    }
+    std::vector<double> max_deviation = input["max_deviation"];
 
     //TOTG will segfault with 1 waypoint... also what are you doing?
     if(waypoints.size() < 2)
@@ -66,6 +62,16 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
         waypoints.clear();
         return(true);
 
+    }
+    if(max_deviation.size() != waypoints.size())
+    {
+        nlohmann::json output;
+        output["success"] = false;
+        output["message"] = "Error: maxDeviation length " + std::to_string(max_deviation.size()) + " not equal to path length" + std::to_string(waypoints.size());
+        ROS_ERROR("[TOTG] Error: maxDeviation length %ld not equal to path length %ld were provided.", max_deviation.size(), waypoints.size());
+        res.json_str = output.dump();
+        waypoints.clear();
+        return(true);
     }
 
     ROS_INFO("[TOTG] Received %ld wps in request, Planning...", waypoints.size());
