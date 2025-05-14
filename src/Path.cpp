@@ -186,6 +186,14 @@ private:
 	Eigen::VectorXd y;	// unit vector in direction of start of circlepathsegment. Orthogonal to x
 };
 
+Path::Path(const std::list<Eigen::VectorXd> &path, double maxDeviation)
+{
+	int np = path.size();
+	std::vector<double> vecdev;
+	vecdev.resize(np, maxDeviation);	
+	Path(path, vecdev);
+}
+
 
 //TODO: add a new class BackTrackSegment : public PathSegment 
 //		to handle intermediate waypoints where the angle between 
