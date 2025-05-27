@@ -53,6 +53,9 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
     if(input.count("max_deviation"))
     {
         max_deviation = input["max_deviation"];
+        ROS_INFO("[TOTG] Overriding max_deviation: %f", max_deviation);
+    }else{
+        ROS_INFO("[TOTG] std max_deviation: %f", max_deviation);
     }
 
     //TOTG will segfault with 1 waypoint... also what are you doing?

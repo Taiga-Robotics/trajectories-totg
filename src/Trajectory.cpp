@@ -317,7 +317,7 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 		if ((pathVel + localTimeStep*acceleration) < 0.0)
 		{
 			localTimeStep = abs(pathVel/(2.0 * acceleration));
-			// cout<<"Tweaking timestep from " << timeStep << " to " << localTimeStep << endl;
+			cout<<"Tweaking timestep from " << timeStep << " to " << localTimeStep << endl;
 		}
 
 		pathVel += localTimeStep * acceleration;
@@ -426,7 +426,7 @@ void Trajectory::integrateBackward(list<TrajectoryStep> &startTrajectory, double
 			if ((pathVel - localTimeStep*acceleration) < 0.0)
 			{
 				localTimeStep = abs(pathVel/(2.0 * acceleration));
-				// cout<<"Tweaking timestep from " << timeStep << " to " << localTimeStep << endl;
+				cout<<"Tweaking timestep from " << timeStep << " to " << localTimeStep << endl;
 			}
 
 			pathVel -= localTimeStep * acceleration;
