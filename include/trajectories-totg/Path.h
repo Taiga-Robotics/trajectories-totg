@@ -87,6 +87,7 @@ class Path
 {
 public:
 	Path(const std::list<Eigen::VectorXd> &path, double maxDeviation = 0.0);
+	Path(const std::list<Eigen::VectorXd> &path, std::vector<double> maxDeviation);
 	Path(const Path &path);
 	~Path();
 	double getLength() const;

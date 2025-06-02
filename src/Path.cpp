@@ -186,6 +186,14 @@ private:
 	Eigen::VectorXd y;	// unit vector in direction of start of circlepathsegment. Orthogonal to x
 };
 
+Path::Path(const std::list<Eigen::VectorXd> &path, double maxDeviation)
+{
+	int np = path.size();
+	std::vector<double> vecdev;
+	vecdev.resize(np, maxDeviation);	
+	Path(path, vecdev);
+}
+
 
 //TODO: add a new class BackTrackSegment : public PathSegment 
 //		to handle intermediate waypoints where the angle between 
@@ -197,7 +205,7 @@ private:
 //		between two points. null motion criteria could be based on 
 //		dt and accel/vel limits (ie dq <= dt*qdmax && dq <= 1/2 * qddmax*dt^2)
 
-Path::Path(const list<VectorXd> &path, double maxDeviation) :
+Path::Path(const list<VectorXd> &path, std::vector<double> maxDeviation) :
 	length(0.0)
 {
 	if(path.size() < 2)
@@ -205,6 +213,12 @@ Path::Path(const list<VectorXd> &path, double maxDeviation) :
 		std::cout << "Error: path length too short at start of path construction. Required length is 2 or more, actual length: " << path.size() << std::endl;
 		return;
 	}
+	if(maxDeviation.size() != path.size())
+	{
+		std::cout << "Error: maxDeviation length " << maxDeviation.size() << " not equal to path length " << path.size() << std::endl;
+		return;
+	}
+	unsigned int mdindex = 0;
 	list<VectorXd>::const_iterator q_startpoint = path.begin();
 	list<VectorXd>::const_iterator q_midpoint = q_startpoint;
 	q_midpoint++;
@@ -214,12 +228,13 @@ Path::Path(const list<VectorXd> &path, double maxDeviation) :
 	while(q_midpoint != path.end()) {
 		q_endpoint = q_midpoint;
 		q_endpoint++;
+		mdindex++;
 		//TODO: implement separate classifier function to identify ideal segment fit?
 		//TODO: if q_startpoint is close enough to q_endpoint use BackTrackSegment
 		//TODO: if q_startpoint is close enough to q_midpoint use NullMotionSegment
-		if(maxDeviation > 0.0 && q_endpoint != path.end()) {
+		if(maxDeviation[mdindex] > 0.0 && q_endpoint != path.end()) {
 			//TODO: make all this used shared pointers.
-			CircularPathSegment* CircleBlendSegment = new CircularPathSegment(0.5 * (*q_startpoint + *q_midpoint), *q_midpoint, 0.5 * (*q_midpoint + *q_endpoint), maxDeviation);
+			CircularPathSegment* CircleBlendSegment = new CircularPathSegment(0.5 * (*q_startpoint + *q_midpoint), *q_midpoint, 0.5 * (*q_midpoint + *q_endpoint), maxDeviation[mdindex]);
 			VectorXd q_blendstart = CircleBlendSegment->getConfig(0.0);
 
 			// connect (stitch) the end of the last blend (or initial point) to the start of this blend, unless theyre REALLY close.
