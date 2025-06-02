@@ -86,6 +86,96 @@ private:
 };
 
 
+
+class BacktrackPathSegment : public PathSegment
+{
+public:
+	BacktrackPathSegment(const Eigen::VectorXd &start, const Eigen::VectorXd &intersection, const Eigen::VectorXd &end, double maxDeviation) {
+
+		// null motion and colinearity checks must already have been performed before creating this segment.
+
+		// copy out config
+		start_=start;
+		intersection_ = intersection;
+		end_=end;
+		dim = start.size();
+
+		Eigen::VectorXd startVec = (intersection - start);
+		Eigen::VectorXd endVec = (end - intersection);
+
+		startDirection = startVec.normalized();
+		endDirection = endVec.normalized();
+		zerovec = Eigen::VectorXd::Zero(dim);
+
+		length = startVec.norm() + endVec.norm();
+		midpointlen = startVec.norm();
+
+	}
+
+	Eigen::VectorXd getConfig(double s) const {
+		// linear blend of the three points
+		if (s<midpointlen)	//subsegment 1
+		{
+			double r2 = s/midpointlen;
+			double r1 = 1.0-r2;
+			return(r1*start_ + r2*intersection_);
+		}
+
+		// else subsegment 2
+		double r2 = (s - midpointlen)/(length - midpointlen);
+		double r1 = 1.0-r2;
+		return(r1*intersection_ + r2*end_);
+	}
+
+	Eigen::VectorXd getTangent(double s) const {
+		if(s<midpointlen)
+		{
+			return(startDirection);
+		}
+		// at the midpoint the "tangent" is undefined. im sure zero is okay.
+		else if(s==midpointlen)
+		{
+			// this fuckery is almost certainly wrong. the algorithm is almost guaranteed to never hit this point.
+			return(zerovec);
+		} 
+		// else s> midpoint return end vector as tangent
+		return(endDirection);
+
+	}
+
+	Eigen::VectorXd getCurvature(double s) const {
+		// at the midpoint the "curvature" is infinite.
+		if(s==midpointlen)
+		{
+			// this fuckery is almost certainly wrong. the algorithm is almost guaranteed to never hit this point.
+			// Im thinking we need to define a fraction of the path where the algorithm blends incoming and outgoing motions.
+			return(100*(endDirection-startDirection));
+		}
+		
+		return(zerovec);
+	}
+
+	/* each axis has at most one switching point, so there will be up to dim returned */
+	list<double> getSwitchingPoints() const {
+		list<double> switchingPoints;
+		switchingPoints.push_back(midpointlen);
+		return switchingPoints;
+	}
+
+	BacktrackPathSegment* clone() const {
+		return new BacktrackPathSegment(*this);
+	}
+
+private:
+	double midpointlen;								// "length" where we arrive at the midpoint.
+	int dim;										// num axes
+	Eigen::VectorXd start_, intersection_, end_;	// waypoints that define this path segment
+	Eigen::VectorXd startDirection, endDirection;	// unit vectors for path subsegments
+	Eigen::VectorXd zerovec;
+};
+
+
+
 class CircularPathSegment : public PathSegment
 {
 public:
@@ -160,7 +250,7 @@ public:
 	/* each axis has at most one switching point, so there will be up to dim returned */
 	list<double> getSwitchingPoints() const {
 		list<double> switchingPoints;
-		const double dim = x.size();
+		const int dim = x.size();
 		for(unsigned int i = 0; i < dim; i++) {
 			double switchingAngle = atan2(y[i], x[i]);
 			if(switchingAngle < 0.0) {
