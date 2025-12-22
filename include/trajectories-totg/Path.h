@@ -65,6 +65,9 @@ public:
 	double getLength() const {
 		return length;
 	}
+
+	bool is_valid()	{return valid;}
+	std::string get_msg(){return msg;}
 	virtual Eigen::VectorXd getConfig(double s) const = 0;
 	virtual Eigen::VectorXd getTangent(double s) const = 0;
 	virtual Eigen::VectorXd getCurvature(double s) const = 0;
@@ -78,6 +81,8 @@ public:
 
 protected:
 	double length;
+	bool valid;			// a hack because the classifier that selects path type can now fail and that is hidden in circlepathsegment
+	std::string msg;	// hangs out with the above hack.
 	// unsigned int index;
 };
 
@@ -97,10 +102,18 @@ public:
 	double getNextSwitchingPoint(double s, bool &discontinuity) const;
 	std::list<std::pair<double, bool> > getSwitchingPoints() const;
 	std::vector<std::pair<PathSegment*, WaypointLocation>> wp_segment_locations;	// a vector of len(waypoints) that holds a pair indicating which segment and which part of said segment the waypoint will be arrived at.
+
+	bool is_valid()	{return valid;}
+	std::string get_msg(){return msg;}
+
 private:
 	PathSegment* getPathSegment(double &s) const;
 	double length;
 	std::list<std::pair<double, bool> > switchingPoints;
 	std::list<PathSegment*> pathSegments;
+
+	//because path construction can fail we need a way to communicate that to the main node
+	bool valid;
+	std::string msg;
 	
 };

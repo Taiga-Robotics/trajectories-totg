@@ -78,6 +78,16 @@ bool totg_svc_cb(iris_support_msgs::IrisJSONsrvRequest &req, iris_support_msgs::
 
     // do the work.
     Path path = Path(waypoints, max_deviation);
+    if(!path.is_valid())
+    {
+        nlohmann::json output;
+        output["success"] = false;
+        output["message"] = "Path generation failed: " + path.get_msg();
+        ROS_ERROR("[TOTG] Path generation failed with message %s", path.get_msg().c_str());
+        res.json_str = output.dump();
+        waypoints.clear();
+        return(true);
+    }
     // Trajectory trajectory(path, maxVelocity, maxAcceleration, dt);
     Trajectory trajectory(path, maxVelocity, maxAcceleration, 0.001);
 

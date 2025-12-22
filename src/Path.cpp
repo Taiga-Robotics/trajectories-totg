@@ -99,6 +99,8 @@ public:
 			center = intersection;
 			x = Eigen::VectorXd::Zero(start.size());
 			y = Eigen::VectorXd::Zero(start.size());
+			msg = "adjacent, linear segment these";
+			valid=true;
 			return;
 		}
 
@@ -113,6 +115,8 @@ public:
 			center = intersection;
 			x = Eigen::VectorXd::Zero(start.size());
 			y = Eigen::VectorXd::Zero(start.size());
+			msg = "colinear, lets do linear segments instead";
+			valid=true;
 			return;
 		}
 
@@ -121,12 +125,18 @@ public:
 		auto v1 = startDirection/startDirection.norm();
 		auto v2 = endDirection/endDirection.norm();
 		if(v1.dot(-v2) > (1.0 - 0.01) ) {
+			msg = "Waypoints would cause a backtrack which is currently unsupported. Please move or resequence these waypoints.";
+			valid = false;
+			return;
+			// old work that made linears, but there's no decel between them so the robot makes an awful noise
+			/*
 			length = 0.0;
 			radius = 1.0;
 			center = intersection;
 			x = Eigen::VectorXd::Zero(start.size());
 			y = Eigen::VectorXd::Zero(start.size());
-			return;
+			return; 
+			*/
 		}
 
 		double distance = std::min((start - intersection).norm(), (end - intersection).norm());
@@ -140,6 +150,8 @@ public:
 		center = intersection + (endDirection - startDirection).normalized() * radius / cos(0.5 * angle);
 		x = (intersection - distance * startDirection - center).normalized();
 		y = startDirection;
+		msg = "circle segment";
+		valid = true;
 	}
 
 	Eigen::VectorXd getConfig(double s) const {
@@ -185,6 +197,7 @@ private:
 	Eigen::VectorXd x;	// unit vector from centre to start of circlepathsegment. Orthogonal to y
 	Eigen::VectorXd y;	// unit vector in direction of start of circlepathsegment. Orthogonal to x
 };
+
 
 Path::Path(const std::list<Eigen::VectorXd> &path, double maxDeviation)
 {
@@ -235,6 +248,12 @@ Path::Path(const list<VectorXd> &path, std::vector<double> maxDeviation) :
 		if(maxDeviation[mdindex] > 0.0 && q_endpoint != path.end()) {
 			//TODO: make all this used shared pointers.
 			CircularPathSegment* CircleBlendSegment = new CircularPathSegment(0.5 * (*q_startpoint + *q_midpoint), *q_midpoint, 0.5 * (*q_midpoint + *q_endpoint), maxDeviation[mdindex]);
+			if(!CircleBlendSegment->is_valid())
+			{
+				valid=false;
+				msg = CircleBlendSegment->get_msg();
+				return;
+			}
 			VectorXd q_blendstart = CircleBlendSegment->getConfig(0.0);
 
 			// connect (stitch) the end of the last blend (or initial point) to the start of this blend, unless theyre REALLY close.
@@ -254,6 +273,7 @@ Path::Path(const list<VectorXd> &path, std::vector<double> maxDeviation) :
 		}
 		q_startpoint = q_midpoint;
 		q_midpoint++;
+		valid=true;
 	}
 
 	//set first point arrival segment because we ignored it in the loop
@@ -274,6 +294,7 @@ Path::Path(const list<VectorXd> &path, std::vector<double> maxDeviation) :
 	switchingPoints.pop_back();
 }
 
+
 Path::Path(const Path &path) :
 	length(path.length),
 	switchingPoints(path.switchingPoints),
@@ -284,15 +305,18 @@ Path::Path(const Path &path) :
 	}
 }
 
+
 Path::~Path() {
 	for(list<PathSegment*>::iterator it = pathSegments.begin(); it != pathSegments.end(); it++) {
 		delete *it;
 	}
 }
 
+
 double Path::getLength() const {
 	return length;
 }
+
 
 PathSegment* Path::getPathSegment(double &s) const {
 	list<PathSegment*>::const_iterator it = pathSegments.begin();
@@ -306,20 +330,24 @@ PathSegment* Path::getPathSegment(double &s) const {
 	return *it;
 }
 
+
 VectorXd Path::getConfig(double s) const {
 	const PathSegment* pathSegment = getPathSegment(s);
 	return pathSegment->getConfig(s);
 }
+
 
 VectorXd Path::getTangent(double s) const {
 	const PathSegment* pathSegment = getPathSegment(s);
 	return pathSegment->getTangent(s);
 }
 
+
 VectorXd Path::getCurvature(double s) const {
 	const PathSegment* pathSegment = getPathSegment(s);
 	return pathSegment->getCurvature(s);
 }
+
 
 double Path::getNextSwitchingPoint(double s, bool &discontinuity) const {
 	list<pair<double, bool> >::const_iterator it = switchingPoints.begin();
@@ -335,6 +363,7 @@ double Path::getNextSwitchingPoint(double s, bool &discontinuity) const {
 		return it->first;
 	}
 }
+
 
 list<pair<double, bool> > Path::getSwitchingPoints() const {
 	return switchingPoints;
