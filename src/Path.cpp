@@ -125,7 +125,7 @@ public:
 		auto v1 = startDirection/startDirection.norm();
 		auto v2 = endDirection/endDirection.norm();
 		if(v1.dot(-v2) > (1.0 - 0.01) ) {
-			msg = "Waypoints would cause a backtrack which is currently unsupported. Please move or resequence these waypoints.";
+			msg = "Waypoints would cause an abrupt backtrack not supported in hardware. Consider smoothing or splitting the motion.";
 			valid = false;
 			return;
 			// old work that made linears, but there's no decel between them so the robot makes an awful noise
