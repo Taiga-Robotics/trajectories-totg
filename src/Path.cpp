@@ -124,8 +124,9 @@ public:
 		// this evaluates to a null motion segment and forces the pathing loop to create linears to get here.
 		auto v1 = startDirection/startDirection.norm();
 		auto v2 = endDirection/endDirection.norm();
-		if(v1.dot(-v2) > (1.0 - 0.01) ) {
-			msg = "Waypoints would cause an abrupt backtrack not supported in hardware. Consider smoothing or splitting the motion.";
+		auto dotprod = v1.dot(-v2);
+		if(dotprod > (1.0 - 0.005) ) {
+			msg = "Waypoints would cause an abrupt backtrack not supported in hardware (" + std::to_string(dotprod) + "). Consider smoothing or splitting the motion.";
 			valid = false;
 			return;
 			// old work that made linears, but there's no decel between them so the robot makes an awful noise
@@ -252,6 +253,7 @@ Path::Path(const list<VectorXd> &path, std::vector<double> maxDeviation) :
 			{
 				valid=false;
 				msg = CircleBlendSegment->get_msg();
+				msg += " backtrack happened after wp " + std::to_string(wp_segment_locations.size() + 1);
 				return;
 			}
 			VectorXd q_blendstart = CircleBlendSegment->getConfig(0.0);
