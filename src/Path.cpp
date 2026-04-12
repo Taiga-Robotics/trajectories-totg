@@ -125,7 +125,7 @@ public:
 		auto v1 = startDirection/startDirection.norm();
 		auto v2 = endDirection/endDirection.norm();
 		auto dotprod = v1.dot(-v2);
-		if(dotprod > (1.0 - 0.005) ) {
+		if(dotprod > (1.0 - 0.002) ) {
 			msg = "Waypoints would cause an abrupt backtrack not supported in hardware (" + std::to_string(dotprod) + "). Consider smoothing or splitting the motion.";
 			valid = false;
 			return;
